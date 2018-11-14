@@ -6,6 +6,7 @@ import xlrd
 
 
 config = configparser.ConfigParser()
+configFileName = "config.ini"
 
 # 检查配置格式是否正确
 def checkConfig(configFileName):
@@ -13,10 +14,15 @@ def checkConfig(configFileName):
     config.read(configFileName)
     sections = config.sections()
     sectionLens = len(sections)
+    print('sectionLensssss',sectionLens)
+    if sectionLens < 4:
+        return False
     # 每个 section 中的 options 的个数必须是相同的
     for i in range(0, sectionLens):
         if i < sectionLens-1:
-            if len(config.options(sections[i])) != len(config.options(sections[i + 1])):
+            n1 = len(config.options(sections[i]))
+            n2 = len(config.options(sections[i+1]))
+            if n1 == 0 | n1 != n2:
                 return False
     # 可进一步判断 options 名是否一致
     pass
@@ -26,6 +32,10 @@ def checkConfig(configFileName):
 # 释放默认配置
 def writeConfig(configFileName):
     global config
+    config.add_section("对比文件名")
+    config.set("对比文件名","省内资管", "IP地址.")
+    config.set("对比文件名","集团", "-IP地址-")
+    config.set("对比文件名","工信部备案", "fpxxList")
     config.add_section("省内资管")
     config.set("省内资管","filed1", "IP地址")
     config.set("省内资管","filed2", "联系人姓名(客户侧)")
@@ -57,7 +67,7 @@ def writeConfig(configFileName):
 
 # 初始化配置
 def initConfig():
-    configFileName = "config.ini"
+    global configFileName
     if os.path.exists(configFileName):
         if checkConfig(configFileName):
             # 配置检查通过，开始对比数据
@@ -71,9 +81,19 @@ def initConfig():
         contrast()
 
 
+# 读取配置
+def readConfig(section,option):
+    global config
+    global configFileName
+    config.read(configFileName)
+    value = config.get(section,option)
+    return value
+
+
+
 # 对比数据
 def contrast():
-    # 定义模板字段，根据第一个字段为查询索引，对比其余字段是否一致
+    # 根据配置，第一个字段为查询索引，对比其余字段是否一致
     # 打开文件
     zgg = xlrd.open_workbook("demo/ip-zg.xlsx")
     # jt = xlrd.open_workbook(r'ip-jt.xlsx')
