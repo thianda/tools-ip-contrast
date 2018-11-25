@@ -8,15 +8,46 @@ import xlrd
 config = configparser.ConfigParser()
 configFileName = "config.ini"
 
+
+# ip 转换： int 转 str
+def int2ip(x):
+    return '.'.join(
+        [str(int(x/(256**i) % 256)) for i in range(3, -1, -1)])
+
+
+# ip 转换： str 转 int
+def ip2int(x):
+    return sum([256**j*int(i)
+                for j, i in enumerate(x.split('.')[::-1])])
+
+
+# ip 字符串 10.10.10.10/32 转成数组: ip/mask/ip_start/ip_end
+def ipParse(ipStr):
+    if ipStr == "":
+        return [None, None, None, None]
+    maskLen = 32
+    if '/' in ipStr:
+        ipStr, maskLen = ipStr.split('/')
+    print(ipStr, maskLen)
+    mask = 0xFFFFFFFF << (32 - int(maskLen))
+    print('mask:', mask)
+    ipInt = ip2int(ipStr)
+    ipStart = ipInt & mask & 0xFFFFFFFF
+    ipEnd = ipInt | ~mask & 0xFFFFFFFF
+    return [ipInt, mask, ipStart, ipEnd]
+
+
+# ip, mask 转成 字符串 10.10.10.10/32
+def ipImport(ipInt, mask):
+    pass
+
+
 # 检查配置格式是否正确
-
-
 def checkConfig(configFileName):
     global config
     config.read(configFileName)
     sections = config.sections()
     sectionLens = len(sections)
-    print('sectionLensssss', sectionLens)
     if sectionLens < 4:
         return False
     # 每个 section 中的 options 的个数必须是相同的
@@ -39,31 +70,31 @@ def writeConfig(configFileName):
     config.set("对比文件名", "集团", "-IP地址-")
     config.set("对比文件名", "工信部备案", "fpxxList")
     config.add_section("省内资管")
-    config.set("省内资管", "filed1", "IP地址")
-    config.set("省内资管", "filed2", "联系人姓名(客户侧)")
-    config.set("省内资管", "filed3", "联系电话(客户侧)")
-    config.set("省内资管", "filed4", "分配使用时间")
-    config.set("省内资管", "filed5", "单位详细地址")
-    config.set("省内资管", "filed6", "联系人邮箱(客户侧)")
-    config.set("省内资管", "filed7", "单位名称/具体业务信息")
+    config.set("省内资管", "ip", "IP地址")
+    config.set("省内资管", "field2", "联系人姓名(客户侧)")
+    config.set("省内资管", "field3", "联系电话(客户侧)")
+    config.set("省内资管", "field4", "分配使用时间")
+    config.set("省内资管", "field5", "单位详细地址")
+    config.set("省内资管", "field6", "联系人邮箱(客户侧)")
+    config.set("省内资管", "field7", "单位名称/具体业务信息")
     config.add_section("集团")
-    config.set("集团", "filed1", "网段名称")
-    config.set("集团", "filed2", "联系人姓名(客户侧)")
-    config.set("集团", "filed3", "联系电话(客户侧)")
-    config.set("集团", "filed4", "分配使用时间")
-    config.set("集团", "filed5", "单位详细地址")
-    config.set("集团", "filed6", "联系人邮箱(客户侧)")
-    config.set("集团", "filed7", "单位名称/具体业务信息")
+    config.set("集团", "ip", "网段名称")
+    config.set("集团", "field2", "联系人姓名(客户侧)")
+    config.set("集团", "field3", "联系电话(客户侧)")
+    config.set("集团", "field4", "分配使用时间")
+    config.set("集团", "field5", "单位详细地址")
+    config.set("集团", "field6", "联系人邮箱(客户侧)")
+    config.set("集团", "field7", "单位名称/具体业务信息")
     config.add_section("工信部备案")
-    config.set("工信部备案", "filed1", "起始IP;终止IP")
-    config.set("工信部备案", "filed2", "联系人姓名")
-    config.set("工信部备案", "filed3", "联系电话")
-    config.set("工信部备案", "filed4", "分配使用时间")
-    config.set("工信部备案", "filed5", "单位详细地址")
-    config.set("工信部备案", "filed6", "联系人邮箱")
-    config.set("工信部备案", "filed7", "单位名称")
+    config.set("工信部备案", "ip", "起始IP;终止IP")
+    config.set("工信部备案", "field2", "联系人姓名")
+    config.set("工信部备案", "field3", "联系电话")
+    config.set("工信部备案", "field4", "分配使用时间")
+    config.set("工信部备案", "field5", "单位详细地址")
+    config.set("工信部备案", "field6", "联系人邮箱")
+    config.set("工信部备案", "field7", "单位名称")
     with open(configFileName, "w") as configFile:
-        configFile.write('# Author: Xianda\n\n# 本配置为一致性检查工具的配置\n# 如删除本配置文件，重新生成的配置文件即为默认配置\n# 如需修改配置，修改本文件后直接保存即可\n\n######\n\n# 若 IP 地址字段分为起始IP、终止IP的，`filed1` 字段中用“;”(英文分号)隔开\n# 程序会依次对 filed 字段进行对比并输出对比结果\n# filed 字段有变化可直接在此增删改，满足一一对应即可\n\n\n\n')
+        configFile.write('# Author: Xianda\n\n# 本配置为一致性检查工具的配置\n# 如删除本配置文件，重新生成的配置文件即为默认配置\n# 如需修改配置，修改本文件后直接保存即可\n\n######\n\n# 若 IP 地址字段分为起始IP、终止IP的，`ip` 字段中用“;”(英文分号)隔开\n# 程序会依次对 field 字段进行对比并输出对比结果\n# field 字段有变化可直接在此增删改，满足一一对应即可\n\n\n\n')
         config.write(configFile)
 
 
@@ -75,7 +106,7 @@ def initConfig():
             # 配置检查通过，开始对比数据
             contrast()
         else:
-            print("配置中 filed 字段的个数不一致，请核对！")
+            print("配置中 field 字段的个数不一致，请核对！")
             os.system("pause")
     else:
         # 释放默认配置，开始对比数据
@@ -93,21 +124,66 @@ def readConfig(section, option):
 
 
 # 匹配导出数据文件名
-def matchedFileName(str):
-    for l in os.listdir():
-        if str in l:
-            fileName = l
-            break
+def matchedFileName():
+    global config
+    global configFileName
+    fileName = {}
+    config.read(configFileName)
+    for option in config.options('对比文件名'):
+        value = config.get('对比文件名', option)
+        for f in os.listdir():
+            if value in f:
+                fileName[option] = f
     return fileName
 
 
-# 对比数据
+# 生成中间文件，转换导出数据为每一行一个 ip
+def generateTemp(fileName):
+    global config
+    # print(list(fileName.keys())[0])
+    # print(config.options(list(fileName.keys())[0]))
+    colNames = {}
+    ipCols = {}
+    for k, v in fileName.items():
+        xls = xlrd.open_workbook(v)
+        sheet = xls.sheet_by_index(len(xls.sheet_names())-1)
+        # 默认认为第一行为列名所在的行
+        colsName = sheet.row_values(0)
+        colNames[k] = []
+        ipCols[k] = []
+        fields = config.options(k)
+        # 遍历配置文件中要对比的列名 记录要对比的字段所在的列
+        for field in fields:
+            # 遍历导出数据的第一行单元格
+            for i in range(0, len(colsName)):
+                configValue = config.get(k, field)
+                # 配置的列名包含导出数据的列名时（为了匹配ip列为多列的情况）
+                if str(colsName[i]) in configValue:
+                    if 'field' in field:
+                        # 记录要对比的字段所在的列
+                        colNames[k].append(i)
+                    elif 'ip' == field:
+                        # 记录 ip 所在的列
+                        ipCols[k].append(i)
+    print('colNames', colNames)
+    print('ipCols', ipCols)
+    # 基于 ip 列 生成中间文件，并补充 ipStart、ipEnd 列
+    # todo
+
+
 def contrast():
+    # 获取导出文件的文件名
+    fileName = matchedFileName()
+    print('fileName', fileName)
+    generateTemp(fileName)
+    return
     # 根据配置，第一个字段为查询索引，对比其余字段是否一致
+
     # 打开文件
     zgg = xlrd.open_workbook("demo.xlsx")
     # jt = xlrd.open_workbook(r'ip-jt.xlsx')
     # print zgg.name
+
     print(zgg.sheet_names())
     sheet2 = zgg.sheet_by_index(0)  # sheet索引从0开始
     # sheet2 = zg.sheet_by_name('sheet2')
@@ -137,4 +213,4 @@ def _test_configparser():
 
 if __name__ == "__main__":
     initConfig()
-    # print("aaa",readConfig('集团','filed2'))
+    # print("aaa",readConfig('集团','field2'))
