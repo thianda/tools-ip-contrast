@@ -9,16 +9,18 @@ config = configparser.ConfigParser()
 configFileName = "config.ini"
 
 # 检查配置格式是否正确
+
+
 def checkConfig(configFileName):
     global config
     config.read(configFileName)
     sections = config.sections()
     sectionLens = len(sections)
-    print('sectionLensssss',sectionLens)
+    print('sectionLensssss', sectionLens)
     if sectionLens < 4:
         return False
     # 每个 section 中的 options 的个数必须是相同的
-    for i in range(0, sectionLens):
+    for i in range(1, sectionLens):
         if i < sectionLens-1:
             n1 = len(config.options(sections[i]))
             n2 = len(config.options(sections[i+1]))
@@ -33,35 +35,35 @@ def checkConfig(configFileName):
 def writeConfig(configFileName):
     global config
     config.add_section("对比文件名")
-    config.set("对比文件名","省内资管", "IP地址.")
-    config.set("对比文件名","集团", "-IP地址-")
-    config.set("对比文件名","工信部备案", "fpxxList")
+    config.set("对比文件名", "省内资管", "IP地址.")
+    config.set("对比文件名", "集团", "-IP地址-")
+    config.set("对比文件名", "工信部备案", "fpxxList")
     config.add_section("省内资管")
-    config.set("省内资管","filed1", "IP地址")
-    config.set("省内资管","filed2", "联系人姓名(客户侧)")
-    config.set("省内资管","filed3", "联系电话(客户侧)")
-    config.set("省内资管","filed4", "分配使用时间")
-    config.set("省内资管","filed5", "单位详细地址")
-    config.set("省内资管","filed6", "联系人邮箱(客户侧)")
-    config.set("省内资管","filed7", "单位名称/具体业务信息")
+    config.set("省内资管", "filed1", "IP地址")
+    config.set("省内资管", "filed2", "联系人姓名(客户侧)")
+    config.set("省内资管", "filed3", "联系电话(客户侧)")
+    config.set("省内资管", "filed4", "分配使用时间")
+    config.set("省内资管", "filed5", "单位详细地址")
+    config.set("省内资管", "filed6", "联系人邮箱(客户侧)")
+    config.set("省内资管", "filed7", "单位名称/具体业务信息")
     config.add_section("集团")
-    config.set("集团","filed1", "网段名称")
-    config.set("集团","filed2", "联系人姓名(客户侧)")
-    config.set("集团","filed3", "联系电话(客户侧)")
-    config.set("集团","filed4", "分配使用时间")
-    config.set("集团","filed5", "单位详细地址")
-    config.set("集团","filed6", "联系人邮箱(客户侧)")
-    config.set("集团","filed7", "单位名称/具体业务信息")
+    config.set("集团", "filed1", "网段名称")
+    config.set("集团", "filed2", "联系人姓名(客户侧)")
+    config.set("集团", "filed3", "联系电话(客户侧)")
+    config.set("集团", "filed4", "分配使用时间")
+    config.set("集团", "filed5", "单位详细地址")
+    config.set("集团", "filed6", "联系人邮箱(客户侧)")
+    config.set("集团", "filed7", "单位名称/具体业务信息")
     config.add_section("工信部备案")
-    config.set("工信部备案","filed1", "起始IP;终止IP")
-    config.set("工信部备案","filed2", "联系人姓名")
-    config.set("工信部备案","filed3", "联系电话")
-    config.set("工信部备案","filed4", "分配使用时间")
-    config.set("工信部备案","filed5", "单位详细地址")
-    config.set("工信部备案","filed6", "联系人邮箱")
-    config.set("工信部备案","filed7", "单位名称")
+    config.set("工信部备案", "filed1", "起始IP;终止IP")
+    config.set("工信部备案", "filed2", "联系人姓名")
+    config.set("工信部备案", "filed3", "联系电话")
+    config.set("工信部备案", "filed4", "分配使用时间")
+    config.set("工信部备案", "filed5", "单位详细地址")
+    config.set("工信部备案", "filed6", "联系人邮箱")
+    config.set("工信部备案", "filed7", "单位名称")
     with open(configFileName, "w") as configFile:
-        configFile.write('# Author: Xianda\n\n# 本配置为一致性检查工具的配置\n# 如需恢复默认请删除本文件，重新生成的配置即为默认配置\n# 如需修改配置，修改本文件后直接保存即可\n\n######\n\n# 若 IP 地址字段分为起始IP、终止IP的，`filed1` 字段中用“;”(英文分号)隔开\n# 程序会依次对 filed 字段进行对比并输出对比结果\n# filed 字段有变化可直接在此增删改，满足一一对应即可\n\n\n\n')
+        configFile.write('# Author: Xianda\n\n# 本配置为一致性检查工具的配置\n# 如删除本配置文件，重新生成的配置文件即为默认配置\n# 如需修改配置，修改本文件后直接保存即可\n\n######\n\n# 若 IP 地址字段分为起始IP、终止IP的，`filed1` 字段中用“;”(英文分号)隔开\n# 程序会依次对 filed 字段进行对比并输出对比结果\n# filed 字段有变化可直接在此增删改，满足一一对应即可\n\n\n\n')
         config.write(configFile)
 
 
@@ -82,20 +84,28 @@ def initConfig():
 
 
 # 读取配置
-def readConfig(section,option):
+def readConfig(section, option):
     global config
     global configFileName
     config.read(configFileName)
-    value = config.get(section,option)
+    value = config.get(section, option)
     return value
 
+
+# 匹配导出数据文件名
+def matchedFileName(str):
+    for l in os.listdir():
+        if str in l:
+            fileName = l
+            break
+    return fileName
 
 
 # 对比数据
 def contrast():
     # 根据配置，第一个字段为查询索引，对比其余字段是否一致
     # 打开文件
-    zgg = xlrd.open_workbook("demo/ip-zg.xlsx")
+    zgg = xlrd.open_workbook("demo.xlsx")
     # jt = xlrd.open_workbook(r'ip-jt.xlsx')
     # print zgg.name
     print(zgg.sheet_names())
@@ -113,7 +123,9 @@ def contrast():
     print(int(sheet2.cell_value(1, 0)))
     print(sheet2.row(1)[0].value)
 
-def ttt():
+
+# @测试 configparser
+def _test_configparser():
     global config
     config.read("config.ini")
     sections = config.sections()
@@ -122,7 +134,7 @@ def ttt():
         for y in options:
             print(config.get(x, y))
 
+
 if __name__ == "__main__":
     initConfig()
-    ttt()
-
+    # print("aaa",readConfig('集团','filed2'))
