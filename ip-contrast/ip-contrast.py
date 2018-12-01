@@ -149,15 +149,11 @@ def generateTemp(fileName):
     # print(config.options(list(fileName.keys())[0]))
 
     # 基于 ip 列 生成中间文件，并补充 ipStart、ipEnd 列
-    # os.mkdir('\\_temp')
-    pdatadir = os.environ.get('ALLUSERSPROFILE') # C:\\ProgramData
-    if os.path.exists(pdatadir):
-        currDate = time.strftime('%Y-%m-%d', time.localtime())
-        configPath = pdatadir + '\\ipContrast'
-        if not os.path.exists(configPath + currDate):
-	        os.makedirs(configPath + currDate)
+
     # 智能识别、生成配置、并输出中间文件，在一次 fileName 的 for 循环中完成
     options = {}
+    colNames = {}
+    ipNames = {}
     for k, v in fileName.items():
         xls = xlrd.open_workbook(v)
         # 获取最后一个 sheet
@@ -167,7 +163,11 @@ def generateTemp(fileName):
         options[k] = {}
         options[k]['fieldCols'] = {}
         options[k]['ipCols'] = []
+        options[k]['output'] = []
+        colNames[k] = []
+        ipNames[k] = []
         fields = config.options(k)
+
         # 遍历配置文件中要对比的列名 记录要对比的字段所在的列
         for field in fields:
             configValue = config.get(k, field)
@@ -177,32 +177,63 @@ def generateTemp(fileName):
             else:
                 # 遍历导出数据的第一行单元格
                 for i in range(0, len(Row0)):
-                    if str(Row0[i].strip()) in configValue:
+                    cellValue = str(Row0[i].strip())
+                    if cellValue in configValue:
                         if 'ip' == field:
                             # 记录 ip 所在的列
                             options[k]['ipCols'].append(i)
-                            # ### todo: 
-                            # 写 ip 列数据到中间文件
+                            ipNames[k].append(cellValue)
                         elif 'field' in field:
                             # 记录要对比的字段所在的列
                             options[k]['fieldCols'][field] = i
-                            # ### todo
-                            # 写 field 数据到中间文件
+                            colNames[k].append(cellValue)
                         # 此处不能加 break，否则匹配到`起始IP`即跳出 for 循环，无法匹配`结束IP`
+        colNames[k] = ['ipStart', 'ipEnd'] + colNames[k]
+        colNames[k].extend(ipNames[k])
+
+    # os.mkdir('\\_temp')
+    currDate = time.strftime('%Y-%m-%d', time.localtime())
+    configPath = os.getcwd() + '/Xianda/ipContrast/'
+    # tempdir=>C:\\ProgramData
+    # tempdir = os.environ.get('ALLUSERSPROFILE')
+    # tempdir=>%USERPROFILE%/Local/Temp, C:/Users/XXXX/AppData/Local/Temp
+    tempdir = os.environ.get('TEMP')
+    if os.path.exists(tempdir):
+        configPath = tempdir + '/Xianda/ipContrast/'
+    if not os.path.exists(configPath + currDate):
+        os.makedirs(configPath + currDate)
+    # 创建中间文件
+    wb = openpyxl.Workbook(write_only=True)
+    ws0 = wb.create_sheet('说明')
+    from openpyxl.worksheet.write_only import WriteOnlyCell
+    from openpyxl.styles import Font
+    cell = WriteOnlyCell(ws0, value='本文件为程序生成的中间文件，可手动删除')
+    cell.font = Font(size=18, color='FF0000')
+    ws0.append([None])
+    ws0.append([None, cell])
+    ws0.append([None])
+    cell = WriteOnlyCell(ws0, value='--Xianda')
+    cell.font = Font(size=11, color='8060ee', bold=True)
+    ws0.append([None, None, None, None, None, None, cell])
+    # ws.merge_cells('A2:G3')
+    for k, v in fileName.items():
+        # 为每个对比文件创建中间文件的一个sheet
+        ws = wb.create_sheet(k)
+        # todo: 输出中间文件 or 直接对比并给出结果
+        ws.append(colNames[k])
+    wrName = configPath + currDate + '/temp' + str(time.time()) + '.xlsx'
+    wb.save(wrName)
     print("options", options)
-
-
-    # 写
-    for file in fileName:
-        workbook = xlrd.open_workbook(fileName[file])
-
+    print('colNames', colNames)
+    return wrName
 
 
 def contrast():
     # 获取导出文件的文件名
     fileName = matchedFileName()
+    tempFile = generateTemp(fileName)
     print("fileName", fileName)
-    generateTemp(fileName)
+    print('tempFile', tempFile)
     return
     # 根据配置，第一个字段为查询索引，对比其余字段是否一致
 
@@ -239,5 +270,8 @@ def _test_configparser():
 
 
 if __name__ == "__main__":
+    t0 = time.time()
     initConfig()
-    # print("aaa",readConfig('集团','field2'))
+    t = time.time()-t0
+    print('脚步执行用时：%2.3f s' % t)
+    os.system('pause')
