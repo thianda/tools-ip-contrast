@@ -3,6 +3,8 @@
 import configparser
 import os
 import xlrd
+import time
+import openpyxl
 
 
 config = configparser.ConfigParser()
@@ -68,6 +70,7 @@ def writeConfig(configFileName):
     config.set("对比文件名", "集团", "-IP地址-")
     config.set("对比文件名", "工信部备案", "fpxxList")
     config.add_section("省内资管")
+    config.set("省内资管", "before", "1")
     config.set("省内资管", "ip", "IP地址")
     config.set("省内资管", "field2", "联系人姓名(客户侧)")
     config.set("省内资管", "field3", "联系电话(客户侧)")
@@ -76,6 +79,7 @@ def writeConfig(configFileName):
     config.set("省内资管", "field6", "联系人邮箱(客户侧)")
     config.set("省内资管", "field7", "单位名称/具体业务信息")
     config.add_section("集团")
+    config.set("集团", "before", "3")
     config.set("集团", "ip", "网段名称")
     config.set("集团", "field2", "联系人姓名(客户侧)")
     config.set("集团", "field3", "联系人电话(客户侧)")
@@ -84,6 +88,7 @@ def writeConfig(configFileName):
     config.set("集团", "field6", "联系人邮箱(客户侧)")
     config.set("集团", "field7", "单位名称/具体业务信息")
     config.add_section("工信部备案")
+    config.set("工信部备案", "before", "1")
     config.set("工信部备案", "ip", "起始IP;终止IP")
     config.set("工信部备案", "field2", "联系人姓名")
     config.set("工信部备案", "field3", "联系人电话")
@@ -142,38 +147,55 @@ def generateTemp(fileName):
     global config
     # print(list(fileName.keys())[0])
     # print(config.options(list(fileName.keys())[0]))
-    colNames = {}
-    ipCols = {}
+
+    # 基于 ip 列 生成中间文件，并补充 ipStart、ipEnd 列
+    # os.mkdir('\\_temp')
+    pdatadir = os.environ.get('ALLUSERSPROFILE') # C:\\ProgramData
+    if os.path.exists(pdatadir):
+        currDate = time.strftime('%Y-%m-%d', time.localtime())
+        configPath = pdatadir + '\\ipContrast'
+        if not os.path.exists(configPath + currDate):
+	        os.makedirs(configPath + currDate)
+    # 智能识别、生成配置、并输出中间文件，在一次 fileName 的 for 循环中完成
+    options = {}
     for k, v in fileName.items():
         xls = xlrd.open_workbook(v)
         # 获取最后一个 sheet
         sheet = xls.sheet_by_index(len(xls.sheet_names()) - 1)
         # 默认将第一行做为列名所在的行
-        colsName = sheet.row_values(0)
-        colNames[k] = {}
-        ipCols[k] = []
+        Row0 = sheet.row_values(0)
+        options[k] = {}
+        options[k]['fieldCols'] = {}
+        options[k]['ipCols'] = []
         fields = config.options(k)
         # 遍历配置文件中要对比的列名 记录要对比的字段所在的列
         for field in fields:
-            # 遍历导出数据的第一行单元格
-            for i in range(0, len(colsName)):
-                configValue = config.get(k, field)
-                # 配置的列名包含导出数据的列名时（为了匹配ip列为多列的情况）
-                if str(colsName[i].strip()) in configValue:
-                    if "field" in field:
-                        # 记录要对比的字段所在的列
-                        colNames[k][field] = i
-                    elif "ip" == field:
-                        # 记录 ip 所在的列
-                        ipCols[k].append(i)
-    print("colNames", colNames)
-    print("ipCols", ipCols)
-    # 基于 ip 列 生成中间文件，并补充 ipStart、ipEnd 列
-    # todo
-    # os.mkdir('\\_temp')
-    pdatadir = os.environ.get('ALLUSERSPROFILE') # C:\\ProgramData
-    if os.path.exists(pdatadir):
-        os.mkdir('%s\\ipContrast' %(pdatadir))
+            configValue = config.get(k, field)
+            if 'before' == field:
+                # 数据起始行（标题所占的行数）默认为 1
+                options[k]['before'] = configValue
+            else:
+                # 遍历导出数据的第一行单元格
+                for i in range(0, len(Row0)):
+                    if str(Row0[i].strip()) in configValue:
+                        if 'ip' == field:
+                            # 记录 ip 所在的列
+                            options[k]['ipCols'].append(i)
+                            # ### todo: 
+                            # 写 ip 列数据到中间文件
+                        elif 'field' in field:
+                            # 记录要对比的字段所在的列
+                            options[k]['fieldCols'][field] = i
+                            # ### todo
+                            # 写 field 数据到中间文件
+                        # 此处不能加 break，否则匹配到`起始IP`即跳出 for 循环，无法匹配`结束IP`
+    print("options", options)
+
+
+    # 写
+    for file in fileName:
+        workbook = xlrd.open_workbook(fileName[file])
+
 
 
 def contrast():
