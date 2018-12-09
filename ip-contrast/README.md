@@ -102,3 +102,9 @@ filed6 = 联系人电子邮箱
 filed7 = 单位名称
 ```
 
+
+
+```python
+pyinstaller -F ip-contrast.py -i favicon/favicon-leaf.ico -n v0.5.0
+```
+

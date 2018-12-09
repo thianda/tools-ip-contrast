@@ -5,7 +5,7 @@ import os
 import xlrd
 import time
 import openpyxl
-
+import shutil
 
 config = configparser.ConfigParser()
 configFileName = "config.ini"
@@ -194,8 +194,9 @@ def generateTemp(fileName):
         colNames[k].extend(['ipStart', 'ipEnd'])
         colNames[k].extend(ipNames[k])
 
+    print("options", options, '\n')
+    print('colNames', colNames, '\n')
     # os.mkdir('\\_temp')
-    currDate = time.strftime('%Y-%m-%d', time.localtime())
     configPath = os.getcwd() + '/Xianda/ipContrast/'
     # tempdir=>C:\\ProgramData
     # tempdir = os.environ.get('ALLUSERSPROFILE')
@@ -203,23 +204,47 @@ def generateTemp(fileName):
     tempdir = os.environ.get('TEMP')
     if os.path.exists(tempdir):
         configPath = tempdir + '/Xianda/ipContrast/'
-    if not os.path.exists(configPath + currDate):
-        os.makedirs(configPath + currDate)
+    if not os.path.exists(configPath):
+        os.makedirs(configPath)
     # 创建中间文件
-    wb = openpyxl.Workbook(write_only=True)
-    ws0 = wb.create_sheet('说明')
-    from openpyxl.worksheet.write_only import WriteOnlyCell
-    from openpyxl.styles import Font
-    cell = WriteOnlyCell(ws0, value='本文件为程序生成的中间文件，可手动删除')
-    cell.font = Font(size=18, color='FF0000')
-    ws0.append([None])
-    ws0.append([None, cell])
-    ws0.append([None])
-    cell = WriteOnlyCell(ws0, value='--Xianda')
-    cell.font = Font(size=11, color='8060ee', bold=True)
-    ws0.append([None, None, None, None, None, None, cell])
+    note = '本文件为程序生成的中间文件，可手动删除'
+    author = '--Xianda'
+    # wb = openpyxl.Workbook(write_only=True)
+    # ws0 = wb.create_sheet('说明')
+    # from openpyxl.worksheet.write_only import WriteOnlyCell
+    # from openpyxl.styles import Font
+    # cell = WriteOnlyCell(ws0, value=note)
+    # cell.font = Font(size=18, color='FF0000')
+    # ws0.append([None])
+    # ws0.append([None, cell])
+    # ws0.append([None])
+    # cell = WriteOnlyCell(ws0, value=author)
+    # cell.font = Font(size=11, color='8060ee', bold=True)
+    # ws0.append([None, None, cell])
+    # cell = WriteOnlyCell(ws0, value=str(options))
+    # cell.font=Font(size=11, color='666600')
+    # ws0.append([None, cell])
+    # cell=WriteOnlyCell(ws0, value=str(colNames))
+    # cell.font=Font(size=11, color='666600')
+    # ws0.append([None, cell])
+    wb = openpyxl.Workbook()
+    ws0 = wb.active
+    ws0.title = '说明'
+    ws0.column_dimensions['B'].width = 120
+    ws0['B2'] = note
+    ws0['C3'] = author
+    line = 6
+    count = len(fileName) + 1
+    for i in fileName:
+        ws0['A'+str(line)] = i
+        ws0['B'+str(line)] = str(options[i])
+        ws0['A'+str(line+count)] = i
+        ws0['B'+str(line+count)] = str(colNames[i])
+        line += 1
     # ws.merge_cells('A2:G3')
-    wrName = configPath + currDate + '/temp' + str(time.time()) + '.xlsx'
+
+    currDate = time.strftime('%Y-%m-%d', time.localtime())
+    wrName = configPath + currDate + '-temp-' + str(time.time()) + '.xlsx'
     for k, v in fileName.items():
         print('Temp File is being Generated for:', k, v)  # debug
         # 为每个对比文件创建中间文件的一个sheet
@@ -253,9 +278,18 @@ def generateTemp(fileName):
             ws.append(tempRow)
             # 遍历 fileNames 的第一个文件，逐行计算 ipStart、ipEnd，并查找一致信息
     wb.save(wrName)
-    print("options", options, '\n')
-    print('colNames', colNames, '\n')
     return wrName
+
+
+def copyfile(srcfile, dstfile):
+    if not os.path.isfile(srcfile):
+        print("%s not exist!" % (srcfile))
+    else:
+        fpath, fname = os.path.split(dstfile)  # 分离文件名和路径
+        if not os.path.exists(fpath):
+            os.makedirs(fpath)  # 创建路径
+        shutil.copyfile(srcfile, dstfile)  # 复制文件
+        # print "copy %s -> %s"%( srcfile,dstfile)
 
 
 def contrast():
