@@ -105,6 +105,6 @@ filed7 = 单位名称
 
 
 ```python
-pyinstaller -F ip-contrast.py -i favicon/favicon-leaf.ico -n v0.5.0
+pyinstaller -F ip-contrast.py -i favicon/favicon.ico -n v0.5.0
 ```
 

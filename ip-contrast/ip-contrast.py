@@ -145,6 +145,9 @@ def matchedFileName():
 
 # 生成中间文件，转换导出数据为每一行一个 ip
 def generateTemp(fileName):
+    if fileName == {}:
+        print('未识别到excel文件。')
+        exit()
     global config
     # print(list(fileName.keys())[0])
     # print(config.options(list(fileName.keys())[0]))
@@ -294,14 +297,57 @@ def copyfile(srcfile, dstfile):
 
 def contrast():
     # 获取导出文件的文件名
-    fileName = matchedFileName()
-    print("fileName", fileName, '\n')
-    tempFile = generateTemp(fileName)
-    print('tempFile', tempFile)
-
-    return
+    # fileName = matchedFileName()
+    # print("fileName", fileName, '\n')
+    # tempFile = generateTemp(fileName)
+    # print('tempFile', tempFile)
+    tempFile = 'C:/Users/THINKP~1/AppData/Local/Temp/Xianda/ipContrast/2018-12-10-temp-1544451306.1642544.xlsx'
+    wb = openpyxl.load_workbook(filename=tempFile, read_only=True)
+    print('wb', wb.sheetnames)
+    wsNames = wb.sheetnames
+    ws1 = wb[wsNames[1]]
+    ####################
+    
+    ####################
+    '''
+    count = 0
+    result = ''  # 输出结果
+    for i in range(2, ws1.max_row):  # 对于基准文件的每一行数据
+        process = 20*i/ws1.max_row
+        if process-count > 1:
+            print('进度：', str(5*int(process))+'%',
+                  time.strftime('%H:%M:%S', time.localtime()))
+            count += 1
+        ipStr = ws1['I'+str(i)].value
+        ipStart1 = ws1['G'+str(i)].value
+        ipEnd1 = ws1['H'+str(i)].value
+        print(ipStr, 'ipRange', ipStart1, ipEnd1)
+        for j in range(2, len(wsNames)):  # 对于每一个对比文件
+            flag = False  # 默认未找到匹配ip
+            ws = wb[wsNames[j]])
+            # 若 ipStart == ipEnd
+            if ipStart1 == ipEnd1:
+                print(ipStr, '是单IP')
+                # 仅查找 ipStart
+                for ii in range(2, ws.max_row):
+                    ipStart = ws['G'+str(ii)].value
+                    ipEnd = ws['H'+str(ii)].value
+                    if ipStart1 == ipStart and ipStart == ipEnd:
+                        flag = True
+                        break
+                print(ipStr, 'found in', ws, ipStart)
+                if flag:
+                    for k in 'ABCDEF':  # 对于每一列
+                        if ws1[k+str(i)].value != ws[k+str(ii)].value:
+                            result += ipStr + ','+wsNames[j]+','+ws[k+'1']+'\n'
+                            break
+            else:  # ipStart != ipEnd
+                print(ipStr, '是IP段')
+                pass
+    print('result', result)
+    '''
     # 根据配置，第一个字段为查询索引，对比其余字段是否一致
-
+    return
     # 打开文件
     zgg = xlrd.open_workbook("demo.xlsx")
     # jt = xlrd.open_workbook(r'ip-jt.xlsx')
@@ -338,5 +384,5 @@ if __name__ == "__main__":
     t0 = time.time()
     initConfig()
     t = time.time()-t0
-    print('本工具执行用时：%2.3f s' % t)
+    print('本工具执行用时：%2.4f s' % t)
     os.system('pause')
