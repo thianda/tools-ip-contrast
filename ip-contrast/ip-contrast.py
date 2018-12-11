@@ -110,14 +110,14 @@ def initConfig():
     if os.path.exists(configFileName):
         if checkConfig(configFileName):
             # 配置检查通过，开始对比数据
-            contrast()
+            return contrast()
         else:
             print("配置中 field 字段的个数不一致，请核对！")
             os.system("pause")
     else:
         # 释放默认配置，开始对比数据
         writeConfig(configFileName)
-        contrast()
+        return contrast()
 
 
 # 读取配置
@@ -200,17 +200,17 @@ def generateTemp(fileName):
     print("options", options, '\n')
     print('colNames', colNames, '\n')
     # os.mkdir('\\_temp')
-    configPath = os.getcwd() + '/Xianda/ipContrast/'
+    configPath = os.getcwd() + '\\Xianda\\ipContrast\\'
     # tempdir=>C:\\ProgramData
     # tempdir = os.environ.get('ALLUSERSPROFILE')
     # tempdir=>%USERPROFILE%/Local/Temp, C:/Users/XXXX/AppData/Local/Temp
     tempdir = os.environ.get('TEMP')
     if os.path.exists(tempdir):
-        configPath = tempdir + '/Xianda/ipContrast/'
+        configPath = tempdir + '\\Xianda\\ipContrast\\'
     if not os.path.exists(configPath):
         os.makedirs(configPath)
     # 创建中间文件
-    note = '本文件为程序生成的中间文件，可手动删除'
+    note = '对比结果在第一个sheet页的 M 列与 N 列'
     author = '--Xianda'
     # wb = openpyxl.Workbook(write_only=True)
     # ws0 = wb.create_sheet('说明')
@@ -245,26 +245,37 @@ def generateTemp(fileName):
         ws0['B'+str(line+count)] = str(colNames[i])
         line += 1
     # ws.merge_cells('A2:G3')
-
     currDate = time.strftime('%Y-%m-%d', time.localtime())
     wrName = configPath + currDate + '-temp-' + str(time.time()) + '.xlsx'
+    isFirstSheet = True
     for k, v in fileName.items():
         print('Temp File is being Generated for:', k, v)  # debug
         # 为每个对比文件创建中间文件的一个sheet
         ws = wb.create_sheet(k)
-        # todo: 输出中间文件 or 直接对比并给出结果
-        ws.append(colNames[k])
+        if isFirstSheet:
+            title = colNames[k] +\
+                ['预留1', '预留2', 'cocatenate', '与集团一致', '与工信部备案一致']
+        else:
+            title = colNames[k]
+        ws.append(title)
         # 遍历每一行
         for row in range(int(options[k]['before']), sheet[k].nrows):
             tempRow = []
             rowValues = sheet[k].row_values(row)
             fieldCols = options[k]['fieldCols']
+            if not isFirstSheet:
+                if rowValues[int(fieldCols['field5'])] == '':
+                    continue
+            currentRow = str(ws.max_row+1)
+            strings = '=CONCATENATE(A'+currentRow+',"-",B'+currentRow+',"-",C' + \
+                currentRow+',"-",D'+currentRow+',"-",E'+currentRow+',"-",F'+currentRow+')'
             for i in fieldCols:
                 tempRow.append(rowValues[int(fieldCols[i])])
             ipCols = options[k]['ipCols']
             if len(ipCols) == 1:
                 ipStr = rowValues[ipCols[0]]
-                tempRow.extend([ipParse(ipStr)[2], ipParse(ipStr)[3], ipStr])
+                tempRow.extend([ipParse(ipStr)[2], ipParse(
+                    ipStr)[3], ipStr, None, None, strings])
             elif len(ipCols) == 2:
                 # 导出数据自带起始 IP 结束IP
                 ip1Str = rowValues[ipCols[0]]
@@ -272,14 +283,26 @@ def generateTemp(fileName):
                 ip1 = ip2int(ip1Str)
                 ip2 = ip2int(ip2Str)
                 if ip1 < ip2:
-                    tempRow.extend([ip1, ip2, ip1Str, ip2Str])
+                    tempRow.extend([ip1, ip2, ip1Str, ip2Str, None, strings])
                 else:
-                    tempRow.extend([ip2, ip1, ip2Str, ip1Str])
+                    tempRow.extend([ip2, ip1, ip2Str, ip1Str, None, strings])
             else:
-                print('IP 列识别错误')
+                print('IP 列识别错误', k, currentRow, '行')
+                return
+            if isFirstSheet:
+                sameAs_jt = '=VLOOKUP(G' + currentRow + \
+                    ',省内资管!G:L,6,0)=L' + currentRow
+                sameAs_gxb = '=VLOOKUP(G' + currentRow + \
+                    ',工信部备案!G:L,6,0)=L' + currentRow
+                tempRow.extend([sameAs_jt, sameAs_gxb])
             # print('tempRow', tempRow) # debug
+            # 过滤客户地址为空的数据
+            # if tempRow[3] == '':
+            #     continue
+            # else:
             ws.append(tempRow)
-            # 遍历 fileNames 的第一个文件，逐行计算 ipStart、ipEnd，并查找一致信息
+        isFirstSheet = False
+        ws.auto_filter.add_sort_condition('G2:G'+str(ws.max_row))
     wb.save(wrName)
     return wrName
 
@@ -297,17 +320,18 @@ def copyfile(srcfile, dstfile):
 
 def contrast():
     # 获取导出文件的文件名
-    # fileName = matchedFileName()
-    # print("fileName", fileName, '\n')
-    # tempFile = generateTemp(fileName)
-    # print('tempFile', tempFile)
-    tempFile = 'C:/Users/THINKP~1/AppData/Local/Temp/Xianda/ipContrast/2018-12-10-temp-1544451306.1642544.xlsx'
+    fileName = matchedFileName()
+    print("fileName", fileName, '\n')
+    tempFile = generateTemp(fileName)
+    print('tempFile', tempFile)
+    return tempFile
+    tempFile = 'C:/Users/THINKP~1/AppData/Local/Temp/Xianda/ipContrast/2018-12-11-temp-1544534032.4411263.xlsx'
     wb = openpyxl.load_workbook(filename=tempFile, read_only=True)
     print('wb', wb.sheetnames)
     wsNames = wb.sheetnames
     ws1 = wb[wsNames[1]]
     ####################
-    
+
     ####################
     '''
     count = 0
@@ -382,7 +406,9 @@ def _test_configparser():
 
 if __name__ == "__main__":
     t0 = time.time()
-    initConfig()
+    result = initConfig()
     t = time.time()-t0
     print('本工具执行用时：%2.4f s' % t)
+    print('-即将打开对比结果-')
     os.system('pause')
+    os.system('explorer /select, '+result)
