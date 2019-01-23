@@ -1,6 +1,6 @@
 # 一致性检查工具使用说明
 
-[更新历史](CHANGELOG.md)  [![HitCount](http://hits.dwyl.io/thianda/xda-tools/ip-contrast.svg)](http://hits.dwyl.io/thianda/xda-tools/ip-contrast) 
+[更新历史](https://github.com/thianda/xda-tools/blob/master/ip-contrast/CHANGELOG.md)  [![HitCount](http://hits.dwyl.io/thianda/xda-tools/ip-contrast.svg)](http://hits.dwyl.io/thianda/xda-tools/ip-contrast) 
 
 ## 模板字段对比
 
@@ -50,23 +50,15 @@
 
 ## 一致性检查工具流程图
 
-> 待更新。（Out-of-date）
-
 ```mermaid
 graph TD
-A0(初始化)---A1[配置文件是否存在]
-A1---|是|B[读取配置]
-A1---|否|A2[写入默认配置]
-B---C[资管导出文件是否存在]
-A2---C
-C---|是|D[集团导出文件是否存在]
-C---|否|E[工信部导出文件是否存在]
-D---|是|R1[对比资管与集团,记录结果]
-E---|是|R2[对比资管与工信部,记录结果]
-E---|否|Z1[给出提示,运行结束]
-D---|否|Z1
-R1---E
-R2---R3[输出对比结果]
+Init(初始化)---A[配置文件是否存在]
+A---|是|B1[读取配置]
+A---|否|B2[写入默认配置]
+B1---C[匹配导出文件名]
+B2---C
+C---D[生成中间文件]
+D---End[给出运行结果]
 ```
 
 ## 默认配置
@@ -128,6 +120,6 @@ field7 = 使用单位名称
 ## 编译
 
 ```python
-pyinstaller -F ip-contrast.py -i favicon/favicon.ico -n [version]
+pyinstaller -F ip-contrast.py -i ../__favicon/favicon.ico -n [version]
 ```
 
