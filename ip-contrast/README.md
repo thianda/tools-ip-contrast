@@ -1,16 +1,16 @@
 # 一致性检查工具使用说明
 
-[更新历史](https://github.com/thianda/xda-tools/blob/master/ip-contrast/CHANGELOG.md)  [![HitCount](http://hits.dwyl.io/thianda/xda-tools/ip-contrast.svg)](http://hits.dwyl.io/thianda/xda-tools/ip-contrast) 
+[更新历史](https://github.com/thianda/xda-tools/blob/master/ip-contrast/CHANGELOG.md)  [![HitCount](http://hits.dwyl.io/thianda/xda-tools/ip-contrast.svg)](https://github.com/thianda/xda-tools/tree/master/ip-contrast) 
 
 ## 模板字段对比
 
-系统导出的模板，文件名格式如下：
+系统导出的模板，文件名包含的关键字如下：
 
-```
-省内资管    IP地址.2018-10-23.11.22.xlsx
-集团       IP地址普通格式导出模板-IP地址-2018-11-12.xls
-工信部     fpxxList20181023.xls
-```
+|导出文件|文件名关键字|
+|-|-|
+|省内资管|IP地址.|
+|集团 |-IP地址-|
+|工信部|fpxxList|
 
 各模板字段对应表
 
@@ -53,13 +53,23 @@
 ```mermaid
 graph TD
 Init(初始化)---A[配置文件是否存在]
-A---|是|B1[读取配置]
-A---|否|B2[写入默认配置]
-B1---C[匹配导出文件名]
-B2---C
-C---D[生成中间文件]
-D---End[给出运行结果]
+A---|否|B[生成默认配置]
+A---|是|C[读取配置]
+B---C
+C---D[匹配导出文件名]
+D---E[生成中间文件]
+E---End[给出运行结果]
 ```
+
+## 程序生命周期
+
+1. 检查配置文件。不存在则生成默认配置。
+2. 检查配置文件是否正确。依据：每份数据的对比字段个数要一致。
+3. 基于配置中，文件名包含的关键字，识别同目录下的导出文件。
+4. 选择每份数据的第一个文件第一个 sheet 页，识别开始记录数据的行数，及各对比字段的所在列。
+5. 
+
+## 使用注意事项
 
 ## 默认配置
 
@@ -87,7 +97,7 @@ D---End[给出运行结果]
 工信部备案 = fpxxList
 
 [省内资管]
-before = 1
+before = 4
 ip = IP地址
 field2 = 联系人姓名(客户侧)
 field3 = 联系电话(客户侧)
