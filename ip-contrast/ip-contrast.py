@@ -1,17 +1,17 @@
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import platform
 import configparser
 import os
 import xlrd
-import gc
 from datetime import datetime
 import openpyxl
 import re
 import traceback
 # import shutil
 
-__version__ = '0.8.0'
+__version__ = '0.8.2'
 configFileName = 'config_%s.ini' % __version__
 DEBUG_FILE = 'debug_log.txt'
 config = configparser.ConfigParser()
@@ -62,13 +62,13 @@ def ipImport(ipInt, mask):
 def checkConfig(configFileName):
     global config
     config.read(configFileName)
-    _version = config.get('common', 'version', fallback=None)
-    if not _version:
-        return False
-    _version = [int(i) for i in _version.split('.')]
-    _current_ver = [int(i) for i in __version__.split('.')]
-    if _version < _current_ver:
-        return False
+    # _version = config.get('common', 'version', fallback=None)
+    # if not _version:
+    #     return False
+    # _version = [int(i) for i in _version.split('.')]
+    # _current_ver = [int(i) for i in __version__.split('.')]
+    # if _version < _current_ver:
+    #     return False
     sections = config.sections()
     sectionLens = len(sections)
     if sectionLens < 5:
@@ -193,6 +193,7 @@ def matchedFileName():
 def generateTemp(fileName):
     if fileName == {}:
         print('Error:', '未识别到excel文件。')
+        pause()
         exit()
     global config
     # print(list(fileName.keys())[0])
@@ -252,19 +253,19 @@ def generateTemp(fileName):
         # colNames[k] = ['ipStart', 'ipEnd'] + colNames[k]
         colNames[k].extend(['ipStart', 'ipEnd'])
         colNames[k].extend(ipNames[k])
-        del(xls, Row0, field, v)
+        # del(xls, Row0, field, v)
     t = (datetime.now() - _t).total_seconds()
     print(now(), '表格配置识别完毕。用时 %2.4f 秒。' % t)
     # print('Info:', 'options', options, '\n')
     # print('Info:', 'colNames', colNames, '\n')
     # os.mkdir('\\_temp')
     SEP = os.path.sep
-    configPath = os.getcwd() + SEP + 'Xianda' + SEP + 'ipContrast' + SEP
+    configPath = os.getcwd() + SEP + '..' + SEP + '__output' + SEP
     # tempdir=>C:\\ProgramData
     # tempdir = os.environ.get('ALLUSERSPROFILE')
     # tempdir=>%USERPROFILE%/Local/Temp, C:/Users/XXXX/AppData/Local/Temp
     tempdir = os.environ.get('TEMP')
-    if os.path.exists(tempdir):
+    if tempdir and os.path.exists(tempdir):
         configPath = tempdir + SEP + 'Xianda' + SEP + 'ipContrast' + SEP
     if not os.path.exists(configPath):
         os.makedirs(configPath)
@@ -324,15 +325,17 @@ def generateTemp(fileName):
         fieldCols = options[k]['fieldCols']
         # 遍历每个文件
         for v in vv:
-            # 获取所有 sheet
             _t = datetime.now()
             xls = xlrd.open_workbook(v)
             t = (datetime.now() - _t).total_seconds()
             print(now(), '加载文件 %s 用时 %2.4f 秒。解析中...' % (v, t))
+            # 获取所有 sheet
             sheet[k] = [xls.sheet_by_index(_index)
                         for _index in range(0, len(xls.sheet_names()))]
             # 遍历每个 sheet
-            for _sheet in sheet[k]:
+            sheets_len = len(sheet[k])
+            for i_sheet in range(0, sheets_len):
+                _sheet = sheet[k][i_sheet]
                 # 自动识别当前 sheet 的 before
                 _before = 0
                 # _before = int(options[k]['before'])
@@ -350,8 +353,10 @@ def generateTemp(fileName):
                         printRed(v)
                         break
                 # 遍历每一行数据
-                for row in range(_before, _sheet.nrows):
-                    print('\r%s 解析进度(行数)：%s' % (now(), row), end='')
+                _nrows = _sheet.nrows
+                for row in range(_before, _nrows):
+                    print('\r%s 解析进度：行数 %s/%s sheet %s/%s' %
+                          (now(), row+1, _nrows, i_sheet+1, sheets_len), end='')
                     rowValues = _sheet.row_values(row)
                     ip1Str = rowValues[ipCols[0]]
                     if ':' in ip1Str:
@@ -371,7 +376,7 @@ def generateTemp(fileName):
                         if i == 'starttime' and len(cellValue) > 10:
                             cellValue = cellValue[:10]
                         tempRow.append(cellValue)
-                        del(cellValue)
+                        # del(cellValue)
                     if len(ipCols) == 1:
                         ip2Str = None
                         if '/32' in ip1Str or not '/' in ip1Str:
@@ -407,14 +412,15 @@ def generateTemp(fileName):
                     #     continue
                     # else:
                     ws.append(tempRow)
-                    del(tempRow, ip_start, ip_end, ip1Str, ip2Str, strings)
-                    gc.collect()
+                    # del(tempRow, ip_start, ip_end, ip1Str, ip2Str, strings)
+                    # gc.collect()
             wb.save(wrName)  # 每读取完一个文件保存一次
-            print('\n%s %s 解析完毕。' % (now(), v))
+            print('\n%s 解析完毕 %s ' % (now(), v))
+            print('当前进度已保存到： %s' % wrName)
         isFirstSheet = False
         ws.auto_filter.ref = 'A1:N' + str(ws.max_row)
         # ws.auto_filter.add_sort_condition('G2:G'+str(ws.max_row))
-        del(ws)
+        # del(ws)
     # wb.save(wrName)
     return wrName
 
@@ -424,7 +430,6 @@ def contrast():
     fileName = matchedFileName()
     # print('Info:','fileName', fileName, '\n')
     tempFile = generateTemp(fileName)
-    print('Info:', 'tempFile', tempFile)
     return tempFile
 
 
@@ -492,6 +497,11 @@ if 'Windows' in platform.system():
     def pause():
         os.system('pause')
 
+    def locateFile(file):
+        print('\n- 即将跳转到输出结果 -\n')
+        pause()
+        os.system('explorer /select, ' + file)
+
 else:
     STYLE = {
         'fore': {
@@ -525,6 +535,10 @@ else:
     def pause():
         pass
 
+    def locateFile(file):
+        print('\n- 结果文件保存为：%s' % file)
+        print('刷新页面可到 `__output` 文件夹中下载查看。')
+
 if __name__ == '__main__':
     print('****欢迎使用一致性检查工具 %s\n' % __version__)
     t0 = datetime.now()
@@ -538,7 +552,5 @@ if __name__ == '__main__':
         printBlue('出错啦。请反馈目录中的 debug_log.txt 文件内容')
     t = datetime.now() - t0
     print('\n执行用时：%2.4f s' % t.total_seconds())
-    print('\n- 即将打开输出结果 -\n')
-    pause()
     # os.system('pause')
-    os.system('explorer /select, ' + result)
+    locateFile(result)
