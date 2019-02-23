@@ -4,16 +4,22 @@ import platform
 import configparser
 import os
 import xlrd
+import gc
 from datetime import datetime
 import openpyxl
 import re
 import traceback
 # import shutil
 
-__version__ = '0.7.2'
+__version__ = '0.8.0'
+configFileName = 'config_%s.ini' % __version__
+DEBUG_FILE = 'debug_log.txt'
 config = configparser.ConfigParser()
-configFileName = 'config.ini'
-t0 = 0
+
+
+# 当前时间的字符串
+def now():
+    return datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
 
 
 # ip 转换： int 转 str
@@ -56,13 +62,21 @@ def ipImport(ipInt, mask):
 def checkConfig(configFileName):
     global config
     config.read(configFileName)
+    _version = config.get('common', 'version', fallback=None)
+    if not _version:
+        return False
+    _version = [int(i) for i in _version.split('.')]
+    _current_ver = [int(i) for i in __version__.split('.')]
+    if _version < _current_ver:
+        return False
     sections = config.sections()
     sectionLens = len(sections)
-    if sectionLens < 4:
+    if sectionLens < 5:
         return False
     # 每个 section 中的 options 的个数必须是相同的
-    for i in range(1, sectionLens):
-        if i < sectionLens - 1:
+    SETTING_LENS = 2
+    for i in range(SETTING_LENS, sectionLens):
+        if i < sectionLens - SETTING_LENS:
             n1 = len(config.options(sections[i]))
             n2 = len(config.options(sections[i + 1]))
             if n1 == 0 | n1 != n2:
@@ -75,37 +89,44 @@ def checkConfig(configFileName):
 # 释放默认配置
 def writeConfig(configFileName):
     global config
-    config.add_section('对比文件名')
-    config.set('对比文件名', '省内资管', 'IP地址.')
-    config.set('对比文件名', '集团', '-IP地址-')
-    config.set('对比文件名', '工信部备案', 'fpxxList')
-    config.add_section('省内资管')
-    config.set('省内资管', 'before', '4')
-    config.set('省内资管', 'ip', 'IP地址*')
-    config.set('省内资管', 'field2', '联系人姓名(客户侧)')
-    config.set('省内资管', 'field3', '联系电话(客户侧)')
-    config.set('省内资管', 'field4', '分配使用时间')
-    config.set('省内资管', 'field5', '单位详细地址')
-    config.set('省内资管', 'field6', '联系人邮箱(客户侧)')
-    config.set('省内资管', 'field7', '单位名称/具体业务信息')
-    config.add_section('集团')
-    config.set('集团', 'before', '3')
-    config.set('集团', 'ip', '网段名称')
-    config.set('集团', 'field2', '联系人姓名(客户侧)')
-    config.set('集团', 'field3', '联系人电话(客户侧)')
-    config.set('集团', 'field4', '分配使用时间')
-    config.set('集团', 'field5', '单位详细地址')
-    config.set('集团', 'field6', '联系人邮箱(客户侧)')
-    config.set('集团', 'field7', '单位名称/具体业务信息')
-    config.add_section('工信部备案')
-    config.set('工信部备案', 'before', '1')
-    config.set('工信部备案', 'ip', '起始IP;终止IP')
-    config.set('工信部备案', 'field2', '联系人姓名')
-    config.set('工信部备案', 'field3', '联系人电话')
-    config.set('工信部备案', 'field4', '分配日期')
-    config.set('工信部备案', 'field5', '单位详细地址')
-    config.set('工信部备案', 'field6', '联系人电子邮件')
-    config.set('工信部备案', 'field7', '使用单位名称')
+    config['common'] = {
+        'version': __version__
+    }
+    config['对比文件名'] = {
+        '省内资管': 'IP地址.',
+        '集团': '-IP地址-',
+        '工信部备案': 'fpxxList',
+    }
+    config['省内资管'] = {
+        'before': '4',
+        'ip': 'IP地址*',
+        'starttime': '分配使用时间',
+        'field3': '联系人姓名(客户侧)',
+        'field4': '联系电话(客户侧)',
+        'field5': '单位详细地址',
+        'field6': '联系人邮箱(客户侧)',
+        'field7': '单位名称/具体业务信息',
+    }
+    config['集团'] = {
+        'before': '3',
+        'ip': '网段名称',
+        'starttime': '分配使用时间',
+        'field3': '联系人姓名(客户侧)',
+        'field4': '联系人电话(客户侧)',
+        'field5': '单位详细地址',
+        'field6': '联系人邮箱(客户侧)',
+        'field7': '单位名称/具体业务信息',
+    }
+    config['工信部备案'] = {
+        'before': '1',
+        'ip': '起始IP;终止IP',
+        'starttime': '分配日期',
+        'field3': '联系人姓名',
+        'field4': '联系人电话',
+        'field5': '单位详细地址',
+        'field6': '联系人电子邮件',
+        'field7': '使用单位名称',
+    }
     with open(configFileName, 'w') as configFile:
         configFile.write(
             '''# Author: Xianda
@@ -131,16 +152,14 @@ def writeConfig(configFileName):
 def initConfig():
     global configFileName
     if os.path.exists(configFileName):
-        if checkConfig(configFileName):
-            # 配置检查通过，开始对比数据
-            return contrast()
-        else:
-            print('Error:', '配置中 field 字段的个数不一致，请核对！')
-            pause()
+        if not checkConfig(configFileName):
+            print('Warning:', '配置有误，已恢复默认', configFileName)
     else:
+        print('Info:', '配置已更新', configFileName)
         # 释放默认配置，开始对比数据
         writeConfig(configFileName)
-        return contrast()
+    print('当前加载的配置：', configFileName)
+    return contrast()
 
 
 # 读取配置
@@ -162,9 +181,10 @@ def matchedFileName():
         value = config.get('对比文件名', option)
         fileName[option] = []
         for f in os.listdir():
-            if value in f:
+            if value in f and not '~' in f:
                 fileName[option].append(f)
-        if option not in fileName:
+        if not fileName[option]:
+            fileName.pop(option)
             print('Warning:', '未找到', option, '的导出数据，将不进行该数据的一致性检查。')
     return fileName
 
@@ -186,6 +206,8 @@ def generateTemp(fileName):
     ipNames = {}
     sheet = {}
     # 按导出文件名遍历
+    _t = datetime.now()
+    print(now(), '识别表格配置...')
     for k, vv in fileName.items():
         # 遍历同一类型的所有文件，如集团导出文件分多个
         # 获取第一个文件的配置
@@ -217,7 +239,7 @@ def generateTemp(fileName):
                             # 记录 ip 所在的列
                             options[k]['ipCols'].append(i)
                             ipNames[k].append(cellValue)
-                        elif 'field' in field:
+                        else:
                             # 记录要对比的字段所在的列
                             options[k]['fieldCols'][field] = i
                             colNames[k].append(cellValue)
@@ -230,7 +252,9 @@ def generateTemp(fileName):
         # colNames[k] = ['ipStart', 'ipEnd'] + colNames[k]
         colNames[k].extend(['ipStart', 'ipEnd'])
         colNames[k].extend(ipNames[k])
-
+        del(xls, Row0, field, v)
+    t = (datetime.now() - _t).total_seconds()
+    print(now(), '表格配置识别完毕。用时 %2.4f 秒。' % t)
     # print('Info:', 'options', options, '\n')
     # print('Info:', 'colNames', colNames, '\n')
     # os.mkdir('\\_temp')
@@ -280,17 +304,13 @@ def generateTemp(fileName):
         ws0['B' + str(line + count)] = str(colNames[i])
         line += 1
     # ws.merge_cells('A2:G3')
+    del(ws0)
     currDate = datetime.strftime(datetime.now(), '%Y-%m-%d_%H%M%S')
     wrName = configPath + 'results-' + currDate + '.xlsx'
     isFirstSheet = True
     ipv4_reg = r'(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}'
-    '''@todo
-    遍历每个文件每个 sheet .done
-    自动识别 before 的值 .done
-    预处理时间字段    
-    内存优化
-    '''
     for k, vv in fileName.items():
+        print('\n%s 开始筛选数据：%s' % (now(), k))
         # 为每个对比文件创建一个 sheet
         ws = wb.create_sheet(k)
         if isFirstSheet:
@@ -304,24 +324,34 @@ def generateTemp(fileName):
         fieldCols = options[k]['fieldCols']
         # 遍历每个文件
         for v in vv:
-            print('Info:', k, '数据正在解析:', v)  # debug
             # 获取所有 sheet
+            _t = datetime.now()
+            xls = xlrd.open_workbook(v)
+            t = (datetime.now() - _t).total_seconds()
+            print(now(), '加载文件 %s 用时 %2.4f 秒。解析中...' % (v, t))
             sheet[k] = [xls.sheet_by_index(_index)
                         for _index in range(0, len(xls.sheet_names()))]
             # 遍历每个 sheet
             for _sheet in sheet[k]:
-                # 遍历每一行
+                # 自动识别当前 sheet 的 before
                 _before = 0
                 # _before = int(options[k]['before'])
                 while True:
-                    # 自动识别 before
                     col_ip = _sheet.row_values(_before)[ipCols[0]]
+                    # if _before < 2:
+                    #     print(_sheet.row_values(_before))
+                    #     printYellow(col_ip)
                     _before += 1
                     is_ipv4 = re.search(ipv4_reg, col_ip)
                     if is_ipv4 or ':' in col_ip:
                         break
-                printGreen('yes')
+                    if _before > 10:
+                        print(now(), 'Error：未识别到有效数据，请检查文件或配置。')
+                        printRed(v)
+                        break
+                # 遍历每一行数据
                 for row in range(_before, _sheet.nrows):
+                    print('\r%s 解析进度(行数)：%s' % (now(), row), end='')
                     rowValues = _sheet.row_values(row)
                     ip1Str = rowValues[ipCols[0]]
                     if ':' in ip1Str:
@@ -333,10 +363,15 @@ def generateTemp(fileName):
                             # 过滤无用数据(field5 为空)
                             continue
                     currentRow = str(ws.max_row + 1)
-                    strings = '=CONCATENATE(A%s,'-',B%s,'-',C%s,'-',D%s,'-',E%s,'-',F%s)' % (
+                    strings = '=CONCATENATE(A%s,"-",B%s,"-",C%s,"-",D%s,"-",E%s,"-",F%s)' % (
                         (currentRow,)*6)
                     for i in fieldCols:
-                        tempRow.append(rowValues[int(fieldCols[i])])
+                        cellValue = rowValues[int(fieldCols[i])]
+                        # 转换 starttime 的格式
+                        if i == 'starttime' and len(cellValue) > 10:
+                            cellValue = cellValue[:10]
+                        tempRow.append(cellValue)
+                        del(cellValue)
                     if len(ipCols) == 1:
                         ip2Str = None
                         if '/32' in ip1Str or not '/' in ip1Str:
@@ -357,7 +392,7 @@ def generateTemp(fileName):
                     else:
                         # ip 字段个数不是 1 也不是 2
                         print('Warning:', 'IP 列识别错误 %s %s 行' % (k, currentRow))
-                        return
+                        return DEBUG_FILE
                     tempRow.extend(
                         [ip_start, ip_end, ip1Str, ip2Str, None, strings])
                     if isFirstSheet:
@@ -372,10 +407,14 @@ def generateTemp(fileName):
                     #     continue
                     # else:
                     ws.append(tempRow)
+                    del(tempRow, ip_start, ip_end, ip1Str, ip2Str, strings)
+                    gc.collect()
             wb.save(wrName)  # 每读取完一个文件保存一次
+            print('\n%s %s 解析完毕。' % (now(), v))
         isFirstSheet = False
         ws.auto_filter.ref = 'A1:N' + str(ws.max_row)
         # ws.auto_filter.add_sort_condition('G2:G'+str(ws.max_row))
+        del(ws)
     # wb.save(wrName)
     return wrName
 
@@ -403,7 +442,7 @@ def contrast():
 # @测试 configparser
 def _test_configparser():
     global config
-    config.read('config.ini')
+    config.read(configFileName)
     sections = config.sections()
     for x in sections:
         options = config.options(x)
@@ -487,21 +526,19 @@ else:
         pass
 
 if __name__ == '__main__':
-    print('****欢迎使用一致性检查工具', __version__)
+    print('****欢迎使用一致性检查工具 %s\n' % __version__)
     t0 = datetime.now()
+    print(now(), '**开始运行')
     try:
         result = initConfig()
     except Exception as err:
         printRed('Error:')
-        traceback.print_exc(file=open('debug_log.txt', 'w+'))
+        traceback.print_exc(file=open(DEBUG_FILE, 'w'))
         printRed(err)
         printBlue('出错啦。请反馈目录中的 debug_log.txt 文件内容')
     t = datetime.now() - t0
     print('\n执行用时：%2.4f s' % t.total_seconds())
-    if 'result' in dir():
-        print('\n- 即将打开对比结果 -\n')
-        pause()
-        os.system('explorer /select, ' + result)
-    else:
-        pause()
-        # os.system('pause')
+    print('\n- 即将打开输出结果 -\n')
+    pause()
+    # os.system('pause')
+    os.system('explorer /select, ' + result)
