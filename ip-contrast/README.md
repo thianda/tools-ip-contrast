@@ -113,7 +113,7 @@ E---End[给出运行结果]
 
 
 [common]
-version = 0.8.0
+version = 0.8.4
 
 [对比文件名]
 省内资管 = IP地址.
@@ -121,8 +121,8 @@ version = 0.8.0
 工信部备案 = fpxxList
 
 [省内资管]
-before = 4
-ip = IP地址*
+tag1 = 所属地市
+ip = IP地址
 starttime = 分配使用时间
 field3 = 联系人姓名(客户侧)
 field4 = 联系电话(客户侧)
@@ -131,7 +131,7 @@ field6 = 联系人邮箱(客户侧)
 field7 = 单位名称/具体业务信息
 
 [集团]
-before = 3
+tag1 = 所属地市
 ip = 网段名称
 starttime = 分配使用时间
 field3 = 联系人姓名(客户侧)
@@ -141,7 +141,7 @@ field6 = 联系人邮箱(客户侧)
 field7 = 单位名称/具体业务信息
 
 [工信部备案]
-before = 1
+tag1 = 所属地
 ip = 起始IP;终止IP
 starttime = 分配日期
 field3 = 联系人姓名
