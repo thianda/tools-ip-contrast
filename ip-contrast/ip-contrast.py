@@ -11,7 +11,7 @@ import re
 import traceback
 # import shutil
 
-__version__ = '0.8.2'
+__version__ = '0.8.3'
 configFileName = 'config_%s.ini' % __version__
 DEBUG_FILE = 'debug_log.txt'
 config = configparser.ConfigParser()
@@ -98,7 +98,7 @@ def writeConfig(configFileName):
         '工信部备案': 'fpxxList',
     }
     config['省内资管'] = {
-        'before': '4',
+        'tag1': '所属地市',
         'ip': 'IP地址*',
         'starttime': '分配使用时间',
         'field3': '联系人姓名(客户侧)',
@@ -108,7 +108,7 @@ def writeConfig(configFileName):
         'field7': '单位名称/具体业务信息',
     }
     config['集团'] = {
-        'before': '3',
+        'tag1': '所属地市',
         'ip': '网段名称',
         'starttime': '分配使用时间',
         'field3': '联系人姓名(客户侧)',
@@ -118,7 +118,7 @@ def writeConfig(configFileName):
         'field7': '单位名称/具体业务信息',
     }
     config['工信部备案'] = {
-        'before': '1',
+        'tag1': '所属地',
         'ip': '起始IP;终止IP',
         'starttime': '分配日期',
         'field3': '联系人姓名',
@@ -211,6 +211,10 @@ def generateTemp(fileName):
     print(now(), '识别表格配置...')
     for k, vv in fileName.items():
         # 遍历同一类型的所有文件，如集团导出文件分多个
+        _totalRows = 0
+        for v in vv:
+            # 添加计算进度百分百以及预计用时的计算
+            pass
         # 获取第一个文件的配置
         v = vv[0]
         xls = xlrd.open_workbook(v)
@@ -317,7 +321,7 @@ def generateTemp(fileName):
         if isFirstSheet:
             extendTitle = ['与' + x + '一致' for x in fileName.keys()]
             extendTitle.pop(0)
-            title = colNames[k] + ['预留1', '预留2', 'concatenate'] + extendTitle
+            title = colNames[k] + ['预留1', '所属地市', 'concatenate'] + extendTitle
         else:
             title = colNames[k]
         ws.append(title)
@@ -334,26 +338,32 @@ def generateTemp(fileName):
                         for _index in range(0, len(xls.sheet_names()))]
             # 遍历每个 sheet
             sheets_len = len(sheet[k])
+            _nrows = 0
             for i_sheet in range(0, sheets_len):
                 _sheet = sheet[k][i_sheet]
+                if 'Sheet' in _sheet.name:
+                    # 疑似修改导出文件手动创建的 sheet，跳过
+                    continue
                 # 自动识别当前 sheet 的 before
+                _invalid = True  # 未识别到有效数据为无效
                 _before = 0
                 # _before = int(options[k]['before'])
-                while True:
-                    col_ip = _sheet.row_values(_before)[ipCols[0]]
-                    # if _before < 2:
-                    #     print(_sheet.row_values(_before))
+                for i in range(10):
+                    col_ip = _sheet.row_values(i)[ipCols[0]]
+                    # if i < 2:
+                    #     print(_sheet.row_values(i))
                     #     printYellow(col_ip)
                     _before += 1
                     is_ipv4 = re.search(ipv4_reg, col_ip)
                     if is_ipv4 or ':' in col_ip:
+                        _invalid = False
                         break
-                    if _before > 10:
-                        print(now(), 'Error：未识别到有效数据，请检查文件或配置。')
-                        printRed(v)
-                        break
+                if _invalid:
+                    print(now(), 'Error：未识别到有效数据，已跳过：')
+                    printRed('%s => [%s]' % (v, _sheet.name))
+                    continue
                 # 遍历每一行数据
-                _nrows = _sheet.nrows
+                _nrows += _sheet.nrows
                 for row in range(_before, _nrows):
                     print('\r%s 解析进度：行数 %s/%s sheet %s/%s' %
                           (now(), row+1, _nrows, i_sheet+1, sheets_len), end='')
@@ -368,8 +378,6 @@ def generateTemp(fileName):
                             # 过滤无用数据(field5 为空)
                             continue
                     currentRow = str(ws.max_row + 1)
-                    strings = '=CONCATENATE(A%s,"-",B%s,"-",C%s,"-",D%s,"-",E%s,"-",F%s)' % (
-                        (currentRow,)*6)
                     for i in fieldCols:
                         cellValue = rowValues[int(fieldCols[i])]
                         # 转换 starttime 的格式
@@ -398,12 +406,14 @@ def generateTemp(fileName):
                         # ip 字段个数不是 1 也不是 2
                         print('Warning:', 'IP 列识别错误 %s %s 行' % (k, currentRow))
                         return DEBUG_FILE
+                    formula_strs = '=CONCATENATE(A%s,"-",B%s,"-",C%s,"-",D%s,"-",E%s,"-",F%s)' % (
+                        (currentRow,)*6)
                     tempRow.extend(
-                        [ip_start, ip_end, ip1Str, ip2Str, None, strings])
+                        [ip_start, ip_end, ip1Str, ip2Str, None, formula_strs])
                     if isFirstSheet:
                         formula = [x for x in fileName.keys()]
                         formula.pop(0)
-                        formula_strs = ['=VLOOKUP(G%s,%s!G:L,6,0)=L%s' % (
+                        formula_strs = ['=VLOOKUP(H%s,%s!G:L,6,0)=L%s' % (
                             currentRow, x, currentRow) for x in formula]
                         tempRow.extend(formula_strs)
                     # print('tempRow', tempRow) # debug
@@ -414,14 +424,21 @@ def generateTemp(fileName):
                     ws.append(tempRow)
                     # del(tempRow, ip_start, ip_end, ip1Str, ip2Str, strings)
                     # gc.collect()
+            ws.auto_filter.ref = 'A1:N' + str(ws.max_row)
+            _t = datetime.now()
             wb.save(wrName)  # 每读取完一个文件保存一次
+            _t = (datetime.now() - _t).total_seconds()
             print('\n%s 解析完毕 %s ' % (now(), v))
-            print('当前进度已保存到： %s' % wrName)
+            print('当前进度已保存到： %s，保存操作用时 %2.4f 秒' % (wrName, _t))
+        ws.column_dimensions['A'].width = 15
+        ws.column_dimensions['H'].width = 11
+        ws.column_dimensions['I'].width = 11
+        ws.column_dimensions['J'].width = 20
+        ws.column_dimensions['K'].width = 20
         isFirstSheet = False
-        ws.auto_filter.ref = 'A1:N' + str(ws.max_row)
         # ws.auto_filter.add_sort_condition('G2:G'+str(ws.max_row))
         # del(ws)
-    # wb.save(wrName)
+    wb.save(wrName)
     return wrName
 
 
@@ -543,6 +560,7 @@ if __name__ == '__main__':
     print('****欢迎使用一致性检查工具 %s\n' % __version__)
     t0 = datetime.now()
     print(now(), '**开始运行')
+    result = DEBUG_FILE
     try:
         result = initConfig()
     except Exception as err:
