@@ -330,7 +330,7 @@ def generateTemp(fileName):
         # 遍历每个文件
         for v in vv:
             _t = datetime.now()
-            xls = xlrd.open_workbook(v)
+            xls = xlrd.open_workbook(v, on_demand=True)
             t = (datetime.now() - _t).total_seconds()
             print(now(), '加载文件 %s 用时 %2.4f 秒。解析中...' % (v, t))
             # 获取所有 sheet
@@ -410,15 +410,32 @@ def generateTemp(fileName):
                         # ip 字段个数不是 1 也不是 2
                         print('Warning:', 'IP 列识别错误 %s %s 行' % (k, currentRow))
                         return DEBUG_FILE
-                    formula_strs = '=CONCATENATE(B%s,"-",C%s,"-",D%s,"-",E%s,"-",F%s,"-",G%s)' % (
-                        (currentRow,)*6)
+                    has_tag = len(options[k]['fieldCols']) > 6
+                    if has_tag:
+                        formula_strs = '=CONCATENATE(B{0},"-",C{0},"-",D{0},"-",E{0},"-",F{0},"-",G{0})'.format(
+                            currentRow)
+                    else:
+                        formula_strs = '=CONCATENATE(A{0},"-",B{0},"-",C{0},"-",D{0},"-",E{0},"-",F{0}'.format(
+                            currentRow)
                     tempRow.extend(
                         [ip_start, ip_end, ip1Str, ip2Str, None, formula_strs])
                     if isFirstSheet:
                         formula = [x for x in fileName.keys()]
-                        formula.pop(0)
-                        formula_strs = ['=VLOOKUP(H%s,%s!H:M,6,0)=M%s' % (
-                            currentRow, x, currentRow) for x in formula]
+                        formula.pop()
+                        formula_strs = []
+                        for x in formula:
+                            position = [currentRow, x]
+                            has_tag2 = len(options[x]['fieldCols']) > 6
+                            if has_tag:
+                                position.extend(['H', 'M'])
+                            else:
+                                position.extend(['G', 'L'])
+                            if has_tag2:
+                                position.append('H:M')
+                            else:
+                                position.append('G:L')
+                            formula_strs.append(
+                                '=VLOOKUP({2}{0},{1}!{4},6,0)={3}{0}'.format(*position))
                         tempRow.extend(formula_strs)
                     # print('tempRow', tempRow) # debug
                     # 过滤客户地址为空的数据
