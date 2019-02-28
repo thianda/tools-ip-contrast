@@ -11,7 +11,7 @@ import re
 import traceback
 # import shutil
 
-__version__ = '0.8.5'
+__version__ = '0.8.6'
 configFileName = 'config_%s.ini' % __version__
 DEBUG_FILE = 'debug_log.txt'
 config = configparser.ConfigParser()
@@ -423,7 +423,7 @@ def generateTemp(fileName):
                         [ip_start, ip_end, ip1Str, ip2Str, None, formula_strs])
                     if isFirstSheet:
                         formula = [x for x in fileName.keys()]
-                        formula.pop()
+                        formula.pop(0)
                         formula_strs = []
                         for x in formula:
                             position = [currentRow, x]
@@ -452,7 +452,8 @@ def generateTemp(fileName):
             wb.save(wrName)  # 每读取完一个文件保存一次
             t = (datetime.now() - _t).total_seconds()
             print('\n%s 解析完毕 %s ' % (now(), v))
-            print('当前进度已保存到： %s，保存操作用时 %2.4f 秒' % (wrName, t))
+            print('当前进度已保存到： %s' % wrName)
+            print('保存操作用时 %2.4f 秒' % t)
         ws.column_dimensions['A'].width = 15
         ws.column_dimensions['H'].width = 11
         ws.column_dimensions['I'].width = 11
@@ -553,8 +554,7 @@ else:
     }
 
     def UseStyle(msg, mode='', fore='', back='40'):
-        fore = '%s' % STYLE['fore'][fore] if STYLE['fore'].has_key(
-            fore) else ''
+        fore = '%s' % STYLE['fore'][fore] if fore in STYLE['fore'] else ''
         style = ';'.join([s for s in [mode, fore, back] if s])
         style = '\033[%sm' % style if style else ''
         end = '\033[%sm' % 0 if style else ''
