@@ -11,7 +11,7 @@ import re
 import traceback
 # import shutil
 
-__version__ = '0.8.4'
+__version__ = '0.8.5'
 configFileName = 'config_%s.ini' % __version__
 DEBUG_FILE = 'debug_log.txt'
 config = configparser.ConfigParser()
@@ -333,16 +333,18 @@ def generateTemp(fileName):
             xls = xlrd.open_workbook(v, on_demand=True)
             t = (datetime.now() - _t).total_seconds()
             print(now(), '加载文件 %s 用时 %2.4f 秒。解析中...' % (v, t))
-            # 获取所有 sheet
-            sheet[k] = [xls.sheet_by_name(i) for i in xls.sheet_names()]
+            # 获取所有 sheet_names
+            sheet[k] = xls.sheet_names()
             # 遍历每个 sheet
             sheets_len = len(sheet[k])
             _nrows = 0
             for i_sheet in range(sheets_len):
-                _sheet = sheet[k][i_sheet]
-                if 'Sheet' in _sheet.name:
+                _sheet_name = sheet[k][i_sheet]
+                if 'Sheet' in _sheet_name:
                     # 疑似修改导出文件手动创建的 sheet，跳过
+                    print('Error: sheet 名称包含 `Sheet`，自动跳过。')
                     continue
+                _sheet = xls.sheet_by_name(_sheet_name)
                 # 自动识别当前 sheet 的 before
                 _invalid = True  # 未识别到有效数据为无效
                 _before = 0
@@ -359,12 +361,12 @@ def generateTemp(fileName):
                         break
                 if _invalid:
                     print(now(), 'Error：未识别到有效数据，已跳过：')
-                    printRed('%s => [%s]' % (v, _sheet.name))
+                    printRed('%s => [%s]' % (v, _sheet_name))
                     continue
                 options['current'] += _before
                 # 遍历每一行数据
                 _nrows += _sheet.nrows
-                for row in range(_before, _nrows):
+                for row in range(_before, _sheet.nrows):
                     options['current'] += 1
                     _curr = options['current']
                     _total = options['total']
