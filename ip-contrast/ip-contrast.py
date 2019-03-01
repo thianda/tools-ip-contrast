@@ -380,7 +380,7 @@ def generateTemp(fileName):
                         continue
                     tempRow = []
                     if not isFirstSheet:
-                        if rowValues[int(fieldCols['field5'])] == '':
+                        if rowValues[int(fieldCols['field7'])] == '':
                             # 过滤无用数据(field5 为空)
                             continue
                     currentRow = str(ws.max_row + 1)
