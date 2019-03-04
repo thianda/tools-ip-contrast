@@ -155,6 +155,7 @@ def initConfig():
     if os.path.exists(configFileName):
         if not checkConfig(configFileName):
             print('Warning:', '配置有误，已恢复默认', configFileName)
+            writeConfig(configFileName)
     else:
         print('Info:', '配置已更新', configFileName)
         # 释放默认配置，开始对比数据
