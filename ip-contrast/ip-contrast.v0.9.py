@@ -19,10 +19,10 @@ class ip_contrast(object):
         self.t0 = datetime.now()
         self.__version__ = '0.9.0'
         self.config = configparser.ConfigParser()
-        self.configFileName = 'config_%s.ini' % self.__version__
+        self.configFileName = 'config_{}.ini'.format(self.__version__)
         self.DEBUG_FILE = 'debug_log.txt'
 
-        print('****欢迎使用一致性检查工具 %s\n' % __version__)
+        print('****欢迎使用一致性检查工具 {}\n'.format(self.__version__))
         print(self.now(), '**开始运行')
         """初始化配置"""
         if os.path.exists(self.configFileName):
@@ -166,10 +166,10 @@ class ip_contrast(object):
             # 若根据配置未找到对应的列：给出提示，结束运行
             if not colFounded:
                 if not field in ['tag1']:
-                    print('在%s中，未找到数据列：【%s】，工具即将退出。' % (k, configValue))
+                    print('在{}中，未找到数据列：【{}】，工具即将退出。'.format((k, configValue))
                     pause()
                     exit()
-        self.options, self.colNames, self.ipNames = options, colNames, ipNames
+        self.options, self.colNames, self.ipNames=options, colNames, ipNames
         return options, colNames, ipNames
 
     def run(self):
@@ -178,14 +178,14 @@ class ip_contrast(object):
 
 
 if 'Windows' in platform.system():
-    __stdInputHandle = -10
-    __stdOutputHandle = -11
-    __stdErrorHandle = -12
-    __foreGroundBLUE = 0x09
-    __foreGroundGREEN = 0x0a
-    __foreGroundRED = 0x0c
-    __foreGroundYELLOW = 0x0e
-    stdOutHandle = ctypes.windll.kernel32.GetStdHandle(__stdOutputHandle)
+    __stdInputHandle=-10
+    __stdOutputHandle=-11
+    __stdErrorHandle=-12
+    __foreGroundBLUE=0x09
+    __foreGroundGREEN=0x0a
+    __foreGroundRED=0x0c
+    __foreGroundYELLOW=0x0e
+    stdOutHandle=ctypes.windll.kernel32.GetStdHandle(__stdOutputHandle)
 
     def setCmdColor(color, handle=stdOutHandle):
         return ctypes.windll.kernel32.SetConsoleTextAttribute(handle, color)
@@ -223,7 +223,7 @@ if 'Windows' in platform.system():
         os.system('explorer /select, ' + file)
 
 else:
-    STYLE = {
+    STYLE={
         'fore': {
             'red': 31,
             'green': 32,
@@ -233,10 +233,10 @@ else:
     }
 
     def UseStyle(msg, mode='', fore='', back='40'):
-        fore = '%s' % STYLE['fore'][fore] if fore in STYLE['fore'] else ''
-        style = ';'.join([s for s in [mode, fore, back] if s])
-        style = '\033[%sm' % style if style else ''
-        end = '\033[%sm' % 0 if style else ''
+        fore='%s' % STYLE['fore'][fore] if fore in STYLE['fore'] else ''
+        style=';'.join([s for s in [mode, fore, back] if s])
+        style='\033[%sm' % style if style else ''
+        end='\033[%sm' % 0 if style else ''
         return '%s%s%s' % (style, msg, end)
 
     def printRed(msg):
@@ -255,19 +255,19 @@ else:
         pass
 
     def locateFile(file):
-        print('\n- 结果文件保存为：%s' % file)
+        print('\n- 结果文件保存为：{}'.format(file))
         print('刷新页面可到 `__output` 文件夹中下载查看。')
 
 if __name__ == '__main__':
-    ip_tables = ip_contrast()
+    ip_tables=ip_contrast()
     try:
         ip_tables.run()
     except Exception as err:
         printRed('Error:')
-        traceback.print_exc(file=open(DEBUG_FILE, 'w'))
+        traceback.print_exc(file=open(ip_tables.DEBUG_FILE, 'w'))
         printRed(err)
         printBlue('出错啦。请反馈目录中的 debug_log.txt 文件内容')
 
-    t = datetime.now() - t0
-    print('\n执行用时：%2.4f s' % t.total_seconds())
-    locateFile(result)
+    t=datetime.now() - ip_tables.t0
+    print('\n执行用时：{:.4f} s'.format(t.total_seconds()))
+    locateFile(ip_tables.result)
