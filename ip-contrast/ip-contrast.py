@@ -11,7 +11,7 @@ import re
 import traceback
 # import shutil
 
-__version__ = '0.8.6'
+__version__ = '0.8.7'
 configFileName = 'config_%s.ini' % __version__
 DEBUG_FILE = 'debug_log.txt'
 config = configparser.ConfigParser()
@@ -348,17 +348,15 @@ def generateTemp(fileName):
                 _sheet = xls.sheet_by_name(_sheet_name)
                 # 自动识别当前 sheet 的 before
                 _invalid = True  # 未识别到有效数据为无效
-                _before = 0
-                # _before = int(options[k]['before'])
-                for i in range(10):
+                for i in range(1, 10):
                     col_ip = _sheet.row_values(i)[ipCols[0]]
                     # if i < 2:
                     #     print(_sheet.row_values(i))
                     #     printYellow(col_ip)
-                    _before += 1
                     is_ipv4 = re.search(ipv4_reg, col_ip)
                     if is_ipv4 or ':' in col_ip:
                         _invalid = False
+                        _before = i
                         break
                 if _invalid:
                     print(now(), 'Error：未识别到有效数据，已跳过：')
